@@ -440,6 +440,12 @@
             <thead>
               <tr class="bg-gray-300">
                 <th class="py-2 px-4 border-b">Timestamp</th>
+                <th class="py-2 px-4 border-b">Moisture</th>
+                <th class="py-2 px-4 border-b">Temp</th>
+                <th class="py-2 px-4 border-b">pH</th>
+                <th class="py-2 px-4 border-b">N</th>
+                <th class="py-2 px-4 border-b">P</th>
+                <th class="py-2 px-4 border-b">K</th>
                 <th class="py-2 px-4 border-b">Crop</th>
               </tr>
             </thead>
@@ -447,11 +453,17 @@
               {% for rec in crop_history %}
               <tr class="{% cycle 'bg-gray-50' 'bg-white' %}">
                 <td class="py-2 px-4 border-b text-gray-700 font-medium">{{ rec.timestamp|date:"Y-m-d H:i" }}</td>
+                <td class="py-2 px-4 border-b text-gray-700">{{ rec.moisture|floatformat:1 }}%</td>
+                <td class="py-2 px-4 border-b text-gray-700">{{ rec.temperature|floatformat:1 }}°C</td>
+                <td class="py-2 px-4 border-b text-gray-700">{{ rec.ph|floatformat:1 }}</td>
+                <td class="py-2 px-4 border-b text-gray-700">{{ rec.nitrogen|floatformat:0 }}</td>
+                <td class="py-2 px-4 border-b text-gray-700">{{ rec.phosphorus|floatformat:0 }}</td>
+                <td class="py-2 px-4 border-b text-gray-700">{{ rec.potassium|floatformat:0 }}</td>
                 <td class="py-2 px-4 border-b text-gray-700 font-medium">{{ rec.recommended_crop }}</td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="2" class="py-4 px-4 text-center text-gray-500">No crop recommendations found for this workspace.</td>
+                <td colspan="8" class="py-4 px-4 text-center text-gray-500">No records found for this workspace.</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -572,14 +584,20 @@
       const table = document.getElementById('crop-history-table');
       table.innerHTML = '';
       if (filteredData.length === 0) {
-        // table.innerHTML = '<tr><td colspan="2" class="text-center py-4">No data found.</td></tr>';
+        table.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No records found for this workspace.</td></tr>';
         return;
       }
       filteredData.forEach(entry => {
         table.innerHTML += `
-              <tr class="text-center">
-                <td class="py-2 px-4 border-b">${entry.timestamp}</td>
-                <td class="py-2 px-4 border-b">${entry.crop}</td>
+              <tr class="text-center bg-white hover:bg-gray-50 border-b">
+                <td class="py-2 px-4 text-gray-700 font-medium">${entry.timestamp}</td>
+                <td class="py-2 px-4 text-gray-700">${parseFloat(entry.moisture).toFixed(1)}%</td>
+                <td class="py-2 px-4 text-gray-700">${parseFloat(entry.temperature).toFixed(1)}°C</td>
+                <td class="py-2 px-4 text-gray-700">${parseFloat(entry.ph).toFixed(1)}</td>
+                <td class="py-2 px-4 text-gray-700">${parseFloat(entry.nitrogen).toFixed(0)}</td>
+                <td class="py-2 px-4 text-gray-700">${parseFloat(entry.phosphorus).toFixed(0)}</td>
+                <td class="py-2 px-4 text-gray-700">${parseFloat(entry.potassium).toFixed(0)}</td>
+                <td class="py-2 px-4 text-gray-700 font-medium">${entry.crop}</td>
               </tr>
             `;
       });
@@ -611,8 +629,17 @@
       }
       // Prepare worksheet data
       const ws_data = [
-        ["Timestamp", "Crop"],
-        ...lastFilteredData.map(entry => [entry.timestamp, entry.crop])
+        ["Timestamp", "Moisture (%)", "Temperature (°C)", "pH", "Nitrogen", "Phosphorus", "Potassium", "Recommended Crop"],
+        ...lastFilteredData.map(entry => [
+          entry.timestamp, 
+          entry.moisture, 
+          entry.temperature, 
+          entry.ph, 
+          entry.nitrogen, 
+          entry.phosphorus, 
+          entry.potassium, 
+          entry.crop
+        ])
       ];
       const ws = XLSX.utils.aoa_to_sheet(ws_data);
       const wb = XLSX.utils.book_new();
