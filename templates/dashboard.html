@@ -1807,12 +1807,19 @@ function connectDevice() {
 
 <script>
   // Polling for sensor data
-  const workspaceId = "{{ selected_workspace.id }}";
+  // We use a function to get the ID because it might change if the user navigates (though usually a full reload happens)
+  // But more importantly, we want to handle the case where the template variable might be empty initially
+  const initialWorkspaceId = "{{ selected_workspace.id|default:'' }}";
   
   function fetchSensorData() {
-    if (!workspaceId) return;
+    // If we are on the dashboard, we likely have a workspace ID in the URL or context
+    // Let's try to get it from the URL query params first if the user switched workspaces via dropdown
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentWorkspaceId = urlParams.get('workspace') || initialWorkspaceId;
+
+    if (!currentWorkspaceId) return;
     
-    fetch(`{% url 'get_latest_sensor_data' %}?workspace_id=${workspaceId}`)
+    fetch(`{% url 'get_latest_sensor_data' %}?workspace_id=${currentWorkspaceId}`)
       .then(response => response.json())
       .then(data => {
         if (Object.keys(data).length > 0) {

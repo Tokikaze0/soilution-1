@@ -38,19 +38,20 @@ class CropService:
         except Exception as e:
             print(f"Error loading ML resources: {e}")
 
-    def get_crop_recommendations(self, nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity):
+    def get_crop_recommendations(self, nitrogen, phosphorus, potassium, temperature, humidity, ph):
         """
         Predict crop recommendations based on soil parameters.
         Returns a list of dictionaries with crop name and confidence.
+        
+        Model expects 6 features: N, P, K, Temperature, Humidity, pH
         """
         if not all([self.model, self.scaler, self.encoder]):
             return [{"name": "Error", "confidence": 0, "message": "ML resources not loaded"}]
 
         try:
-            # Prepare input array in the correct order
-            # IMPORTANT: Ensure this order matches exactly what was used during training
-            # Based on your snippet: N, P, K, Temp, Moisture, pH, Conductivity
-            input_data = np.array([[nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity]])
+            # Prepare input array in the EXACT order the model was trained
+            # Order: N, P, K, Temperature, Humidity, pH (6 features)
+            input_data = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph]])
             
             # Scale the features
             input_scaled = self.scaler.transform(input_data)
@@ -58,7 +59,7 @@ class CropService:
             # Predict
             prediction_probs = self.model.predict(input_scaled)
             
-            # Get all predictions
+            # Get all predictions sorted by confidence
             all_indices = np.argsort(prediction_probs[0])[::-1]
             
             recommendations = []
@@ -66,7 +67,7 @@ class CropService:
                 confidence = float(prediction_probs[0][idx]) * 100
                 
                 if confidence > 0:
-                    # Assuming OneHotEncoder based on your snippet: target_names=encoder.categories_[0]
+                    # Get crop name from encoder
                     if hasattr(self.encoder, 'categories_'):
                         crop_name = self.encoder.categories_[0][idx]
                     elif hasattr(self.encoder, 'classes_'):
@@ -79,7 +80,7 @@ class CropService:
                         "confidence": round(confidence, 2)
                     })
             
-            # Return top 5
+            # Return top 5 recommendations
             return recommendations[:5]
 
         except Exception as e:
@@ -87,37 +88,61 @@ class CropService:
             return [{"name": "Error", "confidence": 0, "message": str(e)}]
 
 class SoilService:
-    def analyze_soil(self, nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity):
+    def analyze_soil(self, nitrogen, phosphorus, potassium, temperature, humidity, ph):
         """
         Analyze soil health based on parameters.
+        Updated to use humidity instead of moisture and removed conductivity.
         """
         status = "Healthy"
         issues = []
 
-        # Simple rule-based analysis (Customize these thresholds)
+        # Nitrogen analysis
         if nitrogen < 20:
-            issues.append("Low Nitrogen")
+            issues.append("Low Nitrogen - Consider nitrogen-rich fertilizers")
         elif nitrogen > 100:
-            issues.append("High Nitrogen")
+            issues.append("High Nitrogen - May cause excessive vegetative growth")
 
+        # Phosphorus analysis
         if phosphorus < 20:
-            issues.append("Low Phosphorus")
+            issues.append("Low Phosphorus - Add phosphate fertilizers")
+        elif phosphorus > 80:
+            issues.append("High Phosphorus - May inhibit micronutrient uptake")
         
+        # Potassium analysis
         if potassium < 20:
-            issues.append("Low Potassium")
+            issues.append("Low Potassium - Add potash fertilizers")
+        elif potassium > 80:
+            issues.append("High Potassium")
 
+        # pH analysis
         if ph < 5.5:
-            issues.append("Acidic Soil")
+            issues.append("Acidic Soil (pH < 5.5) - Consider liming")
         elif ph > 7.5:
-            issues.append("Alkaline Soil")
+            issues.append("Alkaline Soil (pH > 7.5) - May limit nutrient availability")
+
+        # Humidity analysis
+        if humidity < 40:
+            issues.append("Low Humidity - May stress plants")
+        elif humidity > 85:
+            issues.append("High Humidity - Risk of fungal diseases")
+
+        # Temperature analysis
+        if temperature < 15:
+            issues.append("Low Temperature - May slow plant growth")
+        elif temperature > 35:
+            issues.append("High Temperature - May stress plants")
 
         if issues:
             status = "Needs Attention"
 
+        details = f"Soil is {status.lower()}."
+        if issues:
+            details += " " + " ".join(issues) + "."
+
         return {
             "status": status,
             "issues": issues,
-            "details": f"Soil is {status.lower()}. {', '.join(issues)}."
+            "details": details
         }
 
 # Create singleton instances

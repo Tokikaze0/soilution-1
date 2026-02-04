@@ -494,6 +494,23 @@ def reports(request):
     
     total_records = paginator.count
 
+    # Prepare JSON data for the chart/table
+    crop_history_data = []
+    for rec in crop_history_list:
+        crop_history_data.append({
+            'timestamp': rec.timestamp.strftime("%Y-%m-%d %H:%M"),
+            'moisture': rec.moisture,
+            'temperature': rec.temperature,
+            'ph': rec.ph,
+            'nitrogen': rec.nitrogen,
+            'phosphorus': rec.phosphorus,
+            'potassium': rec.potassium,
+            'crop': rec.recommended_crop
+        })
+    
+    import json
+    crop_history_json = json.dumps(crop_history_data)
+
     context = {
         'profile_picture_url': profile_picture_url,
         'workspace': user_workspaces,
@@ -502,6 +519,7 @@ def reports(request):
         'page_obj': page_obj,
         'total_records': total_records,
         'crop_history': page_obj, # Add this alias for template compatibility if needed
+        'crop_history_json': crop_history_json,
     }
 
     return render(request, 'reports.html', context)
@@ -1935,44 +1953,40 @@ def analyze_soil(request):
         try:
             data = json.loads(request.body.decode('utf-8'))
             
-            # Extract soil parameters
+            # Extract soil parameters (updated to match model training)
             nitrogen = data.get('nitrogen')
             phosphorus = data.get('phosphorus')
             potassium = data.get('potassium')
             temperature = data.get('temperature')
-            moisture = data.get('moisture')
+            humidity = data.get('humidity')  # Changed from 'moisture'
             ph = data.get('ph')
-            conductivity = data.get('conductivity')
             
-            # Validate required parameters
-            # Check if any parameter is None (0 is a valid value, so don't use 'if not param')
-            params = [nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity]
+            # Validate required parameters (removed conductivity, changed to humidity)
+            params = [nitrogen, phosphorus, potassium, temperature, humidity, ph]
             if any(p is None for p in params):
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'All soil parameters are required: nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity'
+                    'message': 'All soil parameters are required: nitrogen, phosphorus, potassium, temperature, humidity, ph'
                 }, status=400)
             
-            # Get crop recommendations using the service
+            # Get crop recommendations using the service (updated parameters)
             recommendations = crop_service.get_crop_recommendations(
                 nitrogen=nitrogen,
                 phosphorus=phosphorus,
                 potassium=potassium,
                 temperature=temperature,
-                moisture=moisture,
-                ph=ph,
-                conductivity=conductivity
+                humidity=humidity,  # Changed from moisture
+                ph=ph
             )
             
-            # Get soil analysis using the service
+            # Get soil analysis using the service (updated parameters)
             soil_analysis = soil_service.analyze_soil(
                 nitrogen=nitrogen,
                 phosphorus=phosphorus,
                 potassium=potassium,
                 temperature=temperature,
-                moisture=moisture,
-                ph=ph,
-                conductivity=conductivity
+                humidity=humidity,  # Changed from moisture
+                ph=ph
             )
 
             # Save to database if workspace_id is provided
@@ -1992,9 +2006,9 @@ def analyze_soil(request):
                         phosphorus=phosphorus,
                         potassium=potassium,
                         temperature=temperature,
-                        moisture=moisture,
+                        moisture=humidity,  # Store humidity as moisture in DB
                         ph=ph,
-                        conductivity=conductivity,
+                        conductivity=0,  # Set default or remove if field is nullable
                         recommended_crop=top_crop,
                         confidence=top_confidence,
                         all_recommendations=recommendations
@@ -2072,7 +2086,9 @@ def receive_sensor_data(request):
     """
     if request.method == 'POST':
         try:
-            data = json.loads(request.body.decode('utf-8'))
+            body_unicode = request.body.decode('utf-8')
+            print(f"DEBUG: Received sensor data payload: {body_unicode}")
+            data = json.loads(body_unicode)
             
             # Extract soil parameters
             nitrogen = data.get('nitrogen')
@@ -2083,35 +2099,61 @@ def receive_sensor_data(request):
             ph = data.get('pH')
             conductivity = data.get('conductivity')
             
+            # Check for workspace_id in body as well
+            workspace_id = request.GET.get('workspace_id') or data.get('workspace_id')
+            
+            print(f"DEBUG: Parsed values - N:{nitrogen} P:{phosphorus} K:{potassium} T:{temperature} M:{moisture} pH:{ph} Cond:{conductivity} WS_ID:{workspace_id}")
+
             # Validate required parameters
             params = [nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity]
             if any(p is None for p in params):
+                print("DEBUG: Missing parameters")
                 return JsonResponse({
                     'status': 'error',
                     'message': 'All soil parameters are required'
                 }, status=400)
             
             # Get crop recommendations
-            recommendations = crop_service.get_crop_recommendations(
-                nitrogen=nitrogen,
-                phosphorus=phosphorus,
-                potassium=potassium,
-                temperature=temperature,
-                moisture=moisture,
-                ph=ph,
-                conductivity=conductivity
-            )
+            try:
+                recommendations = crop_service.get_crop_recommendations(
+                    nitrogen=nitrogen,
+                    phosphorus=phosphorus,
+                    potassium=potassium,
+                    temperature=temperature,
+                    moisture=moisture,
+                    ph=ph,
+                    conductivity=conductivity
+                )
+                print(f"DEBUG: ML Recommendations generated: {len(recommendations) if recommendations else 0}")
+            except Exception as e:
+                print(f"DEBUG: ML Service failed: {e}")
+                recommendations = [{"name": "Error", "confidence": 0.0}]
             
             # Find a workspace to attach this data to
-            # Since ESP32 doesn't send ID, we pick the first available workspace
-            workspace = Workspace.objects.first()
+            workspace = None
+            
+            if workspace_id:
+                try:
+                    workspace = Workspace.objects.get(id=workspace_id)
+                except Workspace.DoesNotExist:
+                    print(f"DEBUG: Workspace ID {workspace_id} not found")
+                    pass
+            
+            # Priority 2: Use the most recently created workspace (likely the active one)
+            if not workspace:
+                workspace = Workspace.objects.order_by('-created_at').first()
+                
+            # Priority 3: Fallback to any workspace
+            if not workspace:
+                workspace = Workspace.objects.first()
             
             if workspace:
+                print(f"DEBUG: Saving data to workspace: {workspace.name} (ID: {workspace.id})")
                 top_crop = recommendations[0]['name'] if recommendations else "Unknown"
                 top_confidence = recommendations[0]['confidence'] if recommendations else 0.0
 
                 from .models import CropRecommendation
-                CropRecommendation.objects.create(
+                rec = CropRecommendation.objects.create(
                     workspace=workspace,
                     nitrogen=nitrogen,
                     phosphorus=phosphorus,
@@ -2124,13 +2166,19 @@ def receive_sensor_data(request):
                     confidence=top_confidence,
                     all_recommendations=recommendations
                 )
+                print(f"DEBUG: Data saved successfully. ID: {rec.id} Timestamp: {rec.timestamp}")
                 return JsonResponse({'status': 'success', 'message': 'Data received and saved'})
             else:
+                print("DEBUG: No workspace found")
                 return JsonResponse({'status': 'error', 'message': 'No workspace found to save data'}, status=404)
                 
         except json.JSONDecodeError:
+            print("DEBUG: Invalid JSON")
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
         except Exception as e:
+            print(f"DEBUG: Exception in receive_sensor_data: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             
     return JsonResponse({'status': 'error', 'message': 'Only POST requests are allowed'}, status=405)
@@ -2167,6 +2215,7 @@ def get_latest_sensor_data(request):
         from .models import CropRecommendation
         latest = CropRecommendation.objects.filter(workspace=workspace).order_by('-timestamp').first()
         if latest:
+            print(f"DEBUG: Sending latest data for workspace {workspace.name}: {latest.timestamp}")
             return JsonResponse({
                 'moisture': latest.moisture,
                 'temperature': latest.temperature,
@@ -2177,5 +2226,9 @@ def get_latest_sensor_data(request):
                 'potassium': latest.potassium,
                 'timestamp': latest.timestamp.isoformat()
             })
+        else:
+            print(f"DEBUG: No data found for workspace {workspace.name}")
+            
+    return JsonResponse({})
             
     return JsonResponse({})
