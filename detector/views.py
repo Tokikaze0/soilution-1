@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User 
+from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -90,13 +90,13 @@ def contact_support(request):
                 <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px;">
                     <h2 style="color: #000; margin-bottom: 20px;">New Customer Support Message</h2>
-                    
+
                     <p><strong>Sender Name:</strong> {name}</p>
                     <p><strong>Email Address:</strong> {email}</p>
                     <p><strong>Subject:</strong> {subject}</p>
-                    
+
                     <hr style="margin: 24px 0;" />
-                    
+
                     <p><strong>Message:</strong></p>
                     <p style="white-space: pre-wrap;">{message}</p>
                 </div>
@@ -167,7 +167,7 @@ def crop_details(request):
         selected_workspace = user_workspaces.first()
         if selected_workspace:
             request.session['selected_workspace_id'] = selected_workspace.id
-            
+
     crop_details = {
         'apple': {
             'description': 'Apples thrive in cold, temperate regions.',
@@ -334,18 +334,18 @@ def crop_details(request):
 # def crop_more_details(request, crop_name):
 #     # Path to the crops.json file
 #     json_file_path = os.path.join(settings.BASE_DIR, 'static', 'data', 'crop_details.json')
-    
+
 #     # Load the crop details from the JSON file
 #     with open(json_file_path, 'r', encoding="utf-8") as f:
 #         crop_details = json.load(f)
-    
+
 #     # Get the details of the selected crop
 #     crop = crop_details.get(crop_name)
-    
+
 #     if crop:
 #         return render(request, 'crop_more_details.html', {'crop': crop, 'crop_name': crop_name})
 #     else:
-#         return render(request, '404.html', {'message': 'Crop not found!'})  
+#         return render(request, '404.html', {'message': 'Crop not found!'})
 
 # def crop_more_details(request, crop_name):
 #     # Load crop details
@@ -483,7 +483,7 @@ def reports(request):
 
     # Use Django ORM instead of raw SQL
     from .models import CropRecommendation
-    
+
     if selected_workspace:
         crop_history_list = CropRecommendation.objects.filter(workspace=selected_workspace).order_by('-timestamp')
     else:
@@ -491,7 +491,7 @@ def reports(request):
 
     paginator = Paginator(crop_history_list, 10) # Show 10 contacts per page.
     page_obj = paginator.get_page(page_number)
-    
+
     total_records = paginator.count
 
     # Prepare JSON data for the chart/table
@@ -507,7 +507,7 @@ def reports(request):
             'potassium': rec.potassium,
             'crop': rec.recommended_crop
         })
-    
+
     import json
     crop_history_json = json.dumps(crop_history_data)
 
@@ -558,7 +558,7 @@ def login(request):
 
     response = render(request, 'login.html', {'form': form})
     response['Cache-Control'] = 'no-store'
-    response['Pragma'] = 'no-cache'  
+    response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
 
     return response
@@ -590,7 +590,7 @@ def register(request):
 
     response = render(request, 'register.html', {'form': form})
     response['Cache-Control'] = 'no-store'
-    response['Pragma'] = 'no-cache'  
+    response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
 
     return response
@@ -617,10 +617,10 @@ def confirm_email(request, uidb64, token):
 def verification_email(request):
     if not request.session.get('just_registered', False):
         return redirect('login')
-    
+
     return render(request, 'verification_email.html')
 
-def pending_approval(request):   
+def pending_approval(request):
     return render(request, 'pending_approval.html')
 
 @login_required
@@ -687,7 +687,7 @@ def dashboard(request):
                 'timestamp': rec.timestamp.strftime('%Y-%m-%d %H:%M'),
                 'crop': rec.recommended_crop
             })
-        
+
         # Reverse to make it chronological (oldest to newest)
         history_data.reverse()
         crop_history_json = json.dumps(history_data)
@@ -723,16 +723,16 @@ def ForgotPassword(request):
             }
 
             email_body = render_to_string('password_reset_email.html', context)
-        
+
             email_message = EmailMessage(
                 'Reset your password',
                 email_body,
-                settings.EMAIL_HOST_USER, 
+                settings.EMAIL_HOST_USER,
                 [email]
             )
 
             email_message.content_subtype = 'html'
-            
+
             email_message.fail_silently = True
             email_message.send()
 
@@ -789,7 +789,7 @@ def ResetPassword(request, reset_id):
             else:
                 return redirect('reset-password', reset_id=reset_id)
 
-    
+
     except PasswordReset.DoesNotExist:
         messages.error(request, 'Invalid reset id')
         return redirect('forgot-password')
@@ -809,7 +809,7 @@ def workspace(request):
 
     profile_picture_url = profile.get_profile_image()
     workspace = Workspace.objects.filter(user=request.user).order_by('-id')
-    
+
     paginator = Paginator(workspace, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -925,7 +925,7 @@ def update_account(request):
         else:
             messages.error(request, "No space allowed. Please try again.")
             logger.warning(f"User {user.username} submitted invalid account update form: {form.errors}")
-        
+
     else:
         form = UserProfileForm(instance=user)
 
@@ -1074,7 +1074,7 @@ def admin_register(request):
                 first_name=first_name,
                 last_name=last_name,
                 username=username,
-                email=email, 
+                email=email,
                 password=password,
                 is_active=True
             )
@@ -1098,7 +1098,7 @@ def admin_register(request):
 
     return render(request, 'admin/admin_register.html')
 
-@login_required 
+@login_required
 def admin_page(request):
     total_users = User.objects.count()
     active_users = User.objects.filter(is_active=True).count()
@@ -1432,7 +1432,7 @@ def get_pending_accounts(request):
 def handle_account_action(request):
     user_id = request.POST.get('user_id')
     user = User.objects.get(pk=user_id)
-    profile = user.profile 
+    profile = user.profile
     action = request.POST.get('action')
     reason = request.POST.get('reason', '').strip()
     use_default = request.POST.get('use_default')
@@ -1577,11 +1577,11 @@ def delete_user(request, user_id):
 @user_passes_test(is_admin)
 def user_list(request):
     user_queryset = User.objects.filter(profile__role='user').order_by('username')
-    
+
     paginator = Paginator(user_queryset, 10)  # Show 10 users per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     return render(request, 'admin/user_list.html', {
         'page_obj': page_obj,
         'users': page_obj.object_list,  # For compatibility with your template
@@ -1614,7 +1614,7 @@ def user_detail_modal(request, user_id):
 # @login_required
 # def deactivate_user(request, user_id):
 #     user = get_object_or_404(User, id=user_id)
-    
+
 #     if request.method == 'POST':
 #         user.is_active = False
 #         user.save()
@@ -1627,7 +1627,7 @@ def user_detail_modal(request, user_id):
 # @login_required
 # def activate_user(request, user_id):
 #     user = get_object_or_404(User, id=user_id)
-    
+
 #     if request.method == 'POST':
 #         user.is_active = True
 #         user.save()
@@ -1671,7 +1671,7 @@ def get_unread_count_and_messages(request):
     for msg in recent_messages:
         sender_profile = msg.sender.profile
         profile_image_url = sender_profile.get_profile_image()
-        
+
         # Fallback initials if no avatar
         initials = f"{msg.sender.first_name[:1]}{msg.sender.last_name[:1]}".upper() \
             if msg.sender.first_name and msg.sender.last_name else msg.sender.username[:2].upper()
@@ -1734,7 +1734,7 @@ def get_unread_conversations(request):
 def message_thread(request, user_id):
     user = request.user
     other = get_object_or_404(User, id=user_id)
-    
+
     messages = Message.objects.filter(
         (Q(sender=user, receiver=other) | Q(sender=other, receiver=user))
     ).order_by('timestamp')
@@ -1917,7 +1917,7 @@ def get_admin_users(request):
     # Get all users with the 'admin' role
     admins = User.objects.filter(profile__role='admin')
     admin_data = []
-    
+
     for admin in admins:
         profile = getattr(admin, 'profile', None)
         admin_data.append({
@@ -1925,7 +1925,7 @@ def get_admin_users(request):
             'username': admin.username,
             'profile_image': profile.get_profile_image() if profile else None,
         })
-    
+
     return JsonResponse({'admins': admin_data})
 
 @login_required
@@ -1952,7 +1952,7 @@ def analyze_soil(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
-            
+
             # Extract soil parameters (updated to match model training)
             nitrogen = data.get('nitrogen')
             phosphorus = data.get('phosphorus')
@@ -1960,7 +1960,7 @@ def analyze_soil(request):
             temperature = data.get('temperature')
             humidity = data.get('humidity')  # Changed from 'moisture'
             ph = data.get('ph')
-            
+
             # Validate required parameters (removed conductivity, changed to humidity)
             params = [nitrogen, phosphorus, potassium, temperature, humidity, ph]
             if any(p is None for p in params):
@@ -1968,7 +1968,7 @@ def analyze_soil(request):
                     'status': 'error',
                     'message': 'All soil parameters are required: nitrogen, phosphorus, potassium, temperature, humidity, ph'
                 }, status=400)
-            
+
             # Get crop recommendations using the service (updated parameters)
             recommendations = crop_service.get_crop_recommendations(
                 nitrogen=nitrogen,
@@ -1978,7 +1978,7 @@ def analyze_soil(request):
                 humidity=humidity,  # Changed from moisture
                 ph=ph
             )
-            
+
             # Get soil analysis using the service (updated parameters)
             soil_analysis = soil_service.analyze_soil(
                 nitrogen=nitrogen,
@@ -1995,7 +1995,7 @@ def analyze_soil(request):
                 try:
                     from .models import CropRecommendation, Workspace
                     workspace = Workspace.objects.get(id=workspace_id)
-                    
+
                     # Get the top recommendation
                     top_crop = recommendations[0]['name'] if recommendations else "Unknown"
                     top_confidence = recommendations[0]['confidence'] if recommendations else 0.0
@@ -2017,13 +2017,13 @@ def analyze_soil(request):
                     print(f"Workspace with ID {workspace_id} not found.")
                 except Exception as e:
                     print(f"Error saving crop recommendation: {e}")
-            
+
             return JsonResponse({
                 'status': 'success',
                 'soil_analysis': soil_analysis,
                 'crop_recommendations': recommendations
             })
-            
+
         except json.JSONDecodeError:
             return JsonResponse({
                 'status': 'error',
@@ -2034,7 +2034,7 @@ def analyze_soil(request):
                 'status': 'error',
                 'message': str(e)
             }, status=500)
-    
+
     return JsonResponse({
         'status': 'error',
         'message': 'Only POST requests are allowed'
@@ -2057,13 +2057,13 @@ def start_soil_testing(request):
             #         "command": "start_test"
             #     }
             # )
-            
+
             # Option 2: If using MQTT, publish a message
             # mqtt_client.publish("soilution/commands", "start_test")
-            
+
             # For now, we'll just simulate a success response
             # In a real scenario, you might wait for a response or just acknowledge the command
-            
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Soil testing command sent to device.'
@@ -2073,7 +2073,7 @@ def start_soil_testing(request):
                 'status': 'error',
                 'message': str(e)
             }, status=500)
-            
+
     return JsonResponse({
         'status': 'error',
         'message': 'Only POST requests are allowed'
@@ -2083,70 +2083,70 @@ def start_soil_testing(request):
 def receive_sensor_data(request):
     """
     API endpoint to receive sensor data from ESP32.
+    Model expects 6 features: N, P, K, Temperature, Humidity, pH
     """
     if request.method == 'POST':
         try:
             body_unicode = request.body.decode('utf-8')
             print(f"DEBUG: Received sensor data payload: {body_unicode}")
             data = json.loads(body_unicode)
-            
-            # Extract soil parameters
+
+            # Extract soil parameters (updated to match model training)
             nitrogen = data.get('nitrogen')
             phosphorus = data.get('phosphorus')
             potassium = data.get('potassium')
             temperature = data.get('temperature')
-            moisture = data.get('moisture')
-            ph = data.get('pH')
-            conductivity = data.get('conductivity')
-            
+            humidity = data.get('humidity') or data.get('moisture')  # Support both names for backward compatibility
+            ph = data.get('pH') or data.get('ph')  # Support both pH and ph
+            conductivity = data.get('conductivity', 0)  # Optional parameter with default
+
             # Check for workspace_id in body as well
             workspace_id = request.GET.get('workspace_id') or data.get('workspace_id')
-            
-            print(f"DEBUG: Parsed values - N:{nitrogen} P:{phosphorus} K:{potassium} T:{temperature} M:{moisture} pH:{ph} Cond:{conductivity} WS_ID:{workspace_id}")
 
-            # Validate required parameters
-            params = [nitrogen, phosphorus, potassium, temperature, moisture, ph, conductivity]
+            print(f"DEBUG: Parsed values - N:{nitrogen} P:{phosphorus} K:{potassium} T:{temperature} H:{humidity} pH:{ph} Cond:{conductivity} WS_ID:{workspace_id}")
+
+            # Validate required parameters (6 features for ML model)
+            params = [nitrogen, phosphorus, potassium, temperature, humidity, ph]
             if any(p is None for p in params):
                 print("DEBUG: Missing parameters")
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'All soil parameters are required'
+                    'message': 'All soil parameters are required: nitrogen, phosphorus, potassium, temperature, humidity, ph'
                 }, status=400)
-            
-            # Get crop recommendations
+
+            # Get crop recommendations using ML model (6 features)
             try:
                 recommendations = crop_service.get_crop_recommendations(
                     nitrogen=nitrogen,
                     phosphorus=phosphorus,
                     potassium=potassium,
                     temperature=temperature,
-                    moisture=moisture,
-                    ph=ph,
-                    conductivity=conductivity
+                    humidity=humidity,  # Changed from moisture
+                    ph=ph
                 )
                 print(f"DEBUG: ML Recommendations generated: {len(recommendations) if recommendations else 0}")
             except Exception as e:
                 print(f"DEBUG: ML Service failed: {e}")
                 recommendations = [{"name": "Error", "confidence": 0.0}]
-            
+
             # Find a workspace to attach this data to
             workspace = None
-            
+
             if workspace_id:
                 try:
                     workspace = Workspace.objects.get(id=workspace_id)
                 except Workspace.DoesNotExist:
                     print(f"DEBUG: Workspace ID {workspace_id} not found")
                     pass
-            
+
             # Priority 2: Use the most recently created workspace (likely the active one)
             if not workspace:
                 workspace = Workspace.objects.order_by('-created_at').first()
-                
+
             # Priority 3: Fallback to any workspace
             if not workspace:
                 workspace = Workspace.objects.first()
-            
+
             if workspace:
                 print(f"DEBUG: Saving data to workspace: {workspace.name} (ID: {workspace.id})")
                 top_crop = recommendations[0]['name'] if recommendations else "Unknown"
@@ -2159,19 +2159,25 @@ def receive_sensor_data(request):
                     phosphorus=phosphorus,
                     potassium=potassium,
                     temperature=temperature,
-                    moisture=moisture,
+                    moisture=humidity,  # Store humidity as moisture in DB
                     ph=ph,
-                    conductivity=conductivity,
+                    conductivity=conductivity,  # Store conductivity (default 0 if not provided)
                     recommended_crop=top_crop,
                     confidence=top_confidence,
                     all_recommendations=recommendations
                 )
                 print(f"DEBUG: Data saved successfully. ID: {rec.id} Timestamp: {rec.timestamp}")
-                return JsonResponse({'status': 'success', 'message': 'Data received and saved'})
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Data received and saved',
+                    'recommendations': recommendations[:3],  # Return top 3 recommendations
+                    'recommended_crop': top_crop,
+                    'confidence': top_confidence
+                })
             else:
                 print("DEBUG: No workspace found")
                 return JsonResponse({'status': 'error', 'message': 'No workspace found to save data'}, status=404)
-                
+
         except json.JSONDecodeError:
             print("DEBUG: Invalid JSON")
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
@@ -2180,7 +2186,7 @@ def receive_sensor_data(request):
             import traceback
             traceback.print_exc()
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-            
+
     return JsonResponse({'status': 'error', 'message': 'Only POST requests are allowed'}, status=405)
 
 @login_required
@@ -2190,14 +2196,14 @@ def get_latest_sensor_data(request):
     """
     workspace_id = request.GET.get('workspace_id')
     user = request.user
-    
+
     workspace = None
     if workspace_id:
         try:
             workspace = Workspace.objects.get(id=workspace_id, user=user)
         except Workspace.DoesNotExist:
             pass
-            
+
     if not workspace:
         # Try session
         workspace_id = request.session.get('selected_workspace_id')
@@ -2206,11 +2212,11 @@ def get_latest_sensor_data(request):
                 workspace = Workspace.objects.get(id=workspace_id, user=user)
             except Workspace.DoesNotExist:
                 pass
-                
+
     if not workspace:
         # Fallback
         workspace = Workspace.objects.filter(user=user).first()
-        
+
     if workspace:
         from .models import CropRecommendation
         latest = CropRecommendation.objects.filter(workspace=workspace).order_by('-timestamp').first()
@@ -2228,7 +2234,7 @@ def get_latest_sensor_data(request):
             })
         else:
             print(f"DEBUG: No data found for workspace {workspace.name}")
-            
+
     return JsonResponse({})
-            
+
     return JsonResponse({})
